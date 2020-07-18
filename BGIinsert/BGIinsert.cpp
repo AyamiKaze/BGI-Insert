@@ -1,4 +1,4 @@
-// BGIinsert.cpp : ¶¨Òå¿ØÖÆÌ¨Ó¦ÓÃ³ÌĞòµÄÈë¿Úµã¡£
+// BGIinsert.cpp : å®šä¹‰æ§åˆ¶å°åº”ç”¨ç¨‹åºçš„å…¥å£ç‚¹ã€‚
 //
 
 #include "stdafx.h"
@@ -14,45 +14,45 @@ struct chsblock
 LPWSTR ctowJP(char* str)
 {
 	DWORD dwMinSize;
-	dwMinSize = MultiByteToWideChar(932, 0, str, -1, NULL, 0); //¼ÆËã³¤¶È
+	dwMinSize = MultiByteToWideChar(932, 0, str, -1, NULL, 0); //è®¡ç®—é•¿åº¦
 	LPWSTR out = new wchar_t[dwMinSize];
-	MultiByteToWideChar(932, 0, str, -1, out, dwMinSize);//×ª»»
+	MultiByteToWideChar(932, 0, str, -1, out, dwMinSize);//è½¬æ¢
 	return out;
 }
 
 LPWSTR ctowGBK(char* str)
 {
 	DWORD dwMinSize;
-	dwMinSize = MultiByteToWideChar(936, 0, str, -1, NULL, 0); //¼ÆËã³¤¶È
+	dwMinSize = MultiByteToWideChar(936, 0, str, -1, NULL, 0); //è®¡ç®—é•¿åº¦
 	LPWSTR out = new wchar_t[dwMinSize];
-	MultiByteToWideChar(936, 0, str, -1, out, dwMinSize);//×ª»»
+	MultiByteToWideChar(936, 0, str, -1, out, dwMinSize);//è½¬æ¢
 	return out;
 }
 
 LPWSTR ctowUTF8(char* str)
 {
 	DWORD dwMinSize;
-	dwMinSize = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0); //¼ÆËã³¤¶È
+	dwMinSize = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0); //è®¡ç®—é•¿åº¦
 	LPWSTR out = new wchar_t[dwMinSize];
-	MultiByteToWideChar(CP_UTF8, 0, str, -1, out, dwMinSize);//×ª»»
+	MultiByteToWideChar(CP_UTF8, 0, str, -1, out, dwMinSize);//è½¬æ¢
 	return out;
 }
 
 char* wtocGBK(LPCTSTR str)
 {
 	DWORD dwMinSize;
-	dwMinSize = WideCharToMultiByte(936, NULL, str, -1, NULL, 0, NULL, FALSE); //¼ÆËã³¤¶È
+	dwMinSize = WideCharToMultiByte(936, NULL, str, -1, NULL, 0, NULL, FALSE); //è®¡ç®—é•¿åº¦
 	char *out = new char[dwMinSize];
-	WideCharToMultiByte(936, NULL, str, -1, out, dwMinSize, NULL, FALSE);//×ª»»
+	WideCharToMultiByte(936, NULL, str, -1, out, dwMinSize, NULL, FALSE);//è½¬æ¢
 	return out;
 }
 
 char* wtocUTF8(LPCTSTR str)
 {
 	DWORD dwMinSize;
-	dwMinSize = WideCharToMultiByte(CP_UTF8, NULL, str, -1, NULL, 0, NULL, FALSE); //¼ÆËã³¤¶È
+	dwMinSize = WideCharToMultiByte(CP_UTF8, NULL, str, -1, NULL, 0, NULL, FALSE); //è®¡ç®—é•¿åº¦
 	char *out = new char[dwMinSize];
-	WideCharToMultiByte(CP_UTF8, NULL, str, -1, out, dwMinSize, NULL, FALSE);//×ª»»
+	WideCharToMultiByte(CP_UTF8, NULL, str, -1, out, dwMinSize, NULL, FALSE);//è½¬æ¢
 	return out;
 }
 
@@ -134,6 +134,20 @@ std::wstring ReplaceCR(const wstring& orignStr)
 	return tempStr;
 }
 
+bool IsText(char* Text)
+{
+	bool sig = false;
+	for (int i = 0; i < strlen(Text); i++)
+	{
+		unsigned int c = (unsigned int)Text[i];
+		if (c < 0x20)
+			sig = false;
+		if (c > 0x80)
+			sig = true;
+	}
+	return sig;
+}
+
 int main(int argc, char* argv[])
 {
 	if (argc != 3)
@@ -151,7 +165,7 @@ int main(int argc, char* argv[])
 	auto buf1 = new byte[sizeof(ScriptHeader)];
 	file1.read((char*)buf1, sizeof(ScriptHeader));
 	memcpy(&shdr, buf1, sizeof(ScriptHeader));
-	delete buf1;
+	delete []buf1;
 	buf1 = nullptr;
 	auto res = checkfile(shdr);
 	if (!res)
@@ -183,7 +197,7 @@ int main(int argc, char* argv[])
 		int counter = 0;
 		for (DWORD i = 0; i < szofImage; i++)
 		{
-			if (cmdptr[i] == 0x03)
+			if ((unsigned int)cmdptr[i] == 0x00000003)
 			{
 				char* text =  (char*)cmdptr+cmdptr[i+1];
 				char testchar = '\0';
@@ -191,7 +205,7 @@ int main(int argc, char* argv[])
 				{
 					continue;
 				}
-				if ((USHORT)*text>0x7F)
+				if (((unsigned int)text[0] > 0x7F || text[0] == '<') && IsText(text))
 				{
 					if (*text!='_')
 					{
@@ -211,7 +225,7 @@ int main(int argc, char* argv[])
 						outputprefix += num;
 						outputprefix += ">";
 						file2 << outputprefix << "//" << outtext << endl;
-						file2 << outputprefix << endl;
+						file2 << outputprefix << outtext << endl;
 						file2 << endl;
 						delete filterwchar;
 						delete outtext;
@@ -252,7 +266,7 @@ int main(int argc, char* argv[])
 		int bytetotransfer = 0;
 		for (DWORD i = 0; i < szofImage; i++)
 		{
-			if (cmdptr[i] == 0x03)
+			if ((unsigned int)cmdptr[i] == 0x00000003)
 			{
 				char* text = (char*)cmdptr + cmdptr[i + 1];
 				char testchar = '\0';
@@ -260,7 +274,7 @@ int main(int argc, char* argv[])
 				{
 					continue;
 				}
-				if ((USHORT)*text > 0x7F)
+				if (((unsigned int)text[0] > 0x7F || text[0] == '<') && IsText(text))
 				{
 					if (*text != '_')
 					{
@@ -274,8 +288,18 @@ int main(int argc, char* argv[])
 							char* inserttext = wtocGBK((wchar_t*)newtextlist.at(counter).transtext.c_str());
 							int stln=newtextlist.at(counter).transtext.length()*2;
 							memcpy(outbuffer + bytetotransfer, inserttext, stln);
-							cmdptr[i + 1] = sectsize1 + bytetotransfer;
+							cmdptr[i + 1] = (unsigned int)(sectsize1 + bytetotransfer);
 							bytetotransfer += stln + 1;
+						}
+
+						else
+						{
+							cout << "MissMatch:" << wtocGBK(filtertext) << endl;
+							cout << "AtCount:" << counter << endl;
+							cout << "ErrorMsg:" << wtocGBK((wchar_t*)newtextlist.at(counter).transtext.c_str()) << endl;
+							cout << "LastMsg:" << wtocGBK((wchar_t*)newtextlist.at(counter - 1).transtext.c_str()) << endl;
+							system("pause");
+							return -1;
 						}
 						
 						counter++;
