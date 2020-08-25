@@ -1,4 +1,4 @@
-// BGIinsert.cpp : 定义控制台应用程序的入口点。
+﻿// BGIinsert.cpp : 定义控制台应用程序的入口点。
 //
 
 #include "stdafx.h"
@@ -134,20 +134,6 @@ std::wstring ReplaceCR(const wstring& orignStr)
 	return tempStr;
 }
 
-bool IsText(char* Text)
-{
-	bool sig = false;
-	for (int i = 0; i < strlen(Text); i++)
-	{
-		unsigned int c = (unsigned int)Text[i];
-		if (c < 0x20)
-			sig = false;
-		if (c > 0x80)
-			sig = true;
-	}
-	return sig;
-}
-
 int main(int argc, char* argv[])
 {
 	if (argc != 3)
@@ -195,17 +181,34 @@ int main(int argc, char* argv[])
 		fstream file2;
 		file2.open(fn,ios::out);
 		int counter = 0;
+		DWORD firstOffset = 0;
+		DWORD i = 0;
+		do
+		{
+			if (cmdptr[i] == 0x0000007F)
+			{
+				firstOffset = *(DWORD*)&cmdptr[i + 1];
+				break;
+			}
+			i++;
+		} while (i < szofImage);
+		cout << "Get firstOffset:0x" << hex << firstOffset << endl;
 		for (DWORD i = 0; i < szofImage; i++)
 		{
+			//cout << hex << (unsigned int)cmdptr[i] << endl;
 			if ((unsigned int)cmdptr[i] == 0x00000003)
 			{
+				DWORD textOffset = *(DWORD*)&cmdptr[i + 1];
+				if (textOffset < firstOffset)
+					continue;
+				cout << "Get textOffset:0x" << hex << textOffset << endl;
 				char* text =  (char*)cmdptr+cmdptr[i+1];
 				char testchar = '\0';
 				if (memcmp(text - 1, &testchar, 1) != 0)
 				{
 					continue;
 				}
-				if (((unsigned int)text[0] > 0x7F || text[0] == '<') && IsText(text))
+				if ((unsigned int)text[0] > 0x7F || text[0] == '<')
 				{
 					if (*text!='_')
 					{
@@ -264,17 +267,33 @@ int main(int argc, char* argv[])
 		memset(outbuffer, 0, 6553600);
 		int counter = 0;
 		int bytetotransfer = 0;
+		DWORD firstOffset = 0;
+		DWORD i = 0;
+		do
+		{
+			if (cmdptr[i] == 0x0000007F)
+			{
+				firstOffset = *(DWORD*)&cmdptr[i + 1];
+				break;
+			}
+			i++;
+		} while (i < szofImage);
+		cout << "Get firstOffset:0x" << hex << firstOffset << endl;
 		for (DWORD i = 0; i < szofImage; i++)
 		{
 			if ((unsigned int)cmdptr[i] == 0x00000003)
 			{
+				DWORD textOffset = *(DWORD*)&cmdptr[i + 1];
+				if (textOffset < firstOffset)
+					continue;
+				cout << "Get textOffset:0x" << hex << textOffset << endl;
 				char* text = (char*)cmdptr + cmdptr[i + 1];
 				char testchar = '\0';
 				if (memcmp(text - 1, &testchar, 1) != 0)
 				{
 					continue;
 				}
-				if (((unsigned int)text[0] > 0x7F || text[0] == '<') && IsText(text))
+				if ((unsigned int)text[0] > 0x7F || text[0] == '<')
 				{
 					if (*text != '_')
 					{
@@ -295,9 +314,11 @@ int main(int argc, char* argv[])
 						else
 						{
 							cout << "MissMatch:" << wtocGBK(filtertext) << endl;
+							cout << "MissMatch:" << text << endl;
 							cout << "AtCount:" << counter << endl;
 							cout << "ErrorMsg:" << wtocGBK((wchar_t*)newtextlist.at(counter).transtext.c_str()) << endl;
-							cout << "LastMsg:" << wtocGBK((wchar_t*)newtextlist.at(counter - 1).transtext.c_str()) << endl;
+							//cout << "LastMsg:" << wtocGBK((wchar_t*)newtextlist.at(counter - 1).transtext.c_str()) << endl;
+
 							system("pause");
 							return -1;
 						}
